@@ -30,6 +30,7 @@ public interface CustomerService {
     Optional<CustomerDTO> getCustomerById(Long id);
 
     /**
+     * TODO: based on description, introduce search logic
      * Search for customers based on a search term with pagination.
      * @param searchTerm the term to search by
      * @param page the page number

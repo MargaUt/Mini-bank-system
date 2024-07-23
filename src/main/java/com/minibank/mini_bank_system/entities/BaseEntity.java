@@ -10,12 +10,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.Version;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 @Data
 @MappedSuperclass
 @Audited
 @SuperBuilder
+@NoArgsConstructor
 public abstract class BaseEntity {
 	
     @Id
