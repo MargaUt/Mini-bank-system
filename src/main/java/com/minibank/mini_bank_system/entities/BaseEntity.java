@@ -22,7 +22,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 public abstract class BaseEntity {
-
+	//TODO improve id generation strategy
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;

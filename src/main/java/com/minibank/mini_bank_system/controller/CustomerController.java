@@ -21,6 +21,9 @@ import com.minibank.mini_bank_system.service.CustomerService;
 @RequestMapping("/customers")
 public class CustomerController {
 
+	// TODO improve Mapping and
+	// use ResponseEntity for handling responses
+
 	@Autowired
 	private CustomerService customerService;
 

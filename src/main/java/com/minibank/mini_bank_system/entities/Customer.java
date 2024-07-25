@@ -1,16 +1,18 @@
 package com.minibank.mini_bank_system.entities;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
+import org.hibernate.envers.Audited;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -22,6 +24,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 @Entity
+@Audited
 public class Customer extends BaseEntity {
 
 	public String name;
@@ -43,12 +46,20 @@ public class Customer extends BaseEntity {
 	// process.
 
 	@OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-	@Builder.Default
-	public List<Address> addresses = new ArrayList<>();
+	public List<Address> addresses;
+
+	@ManyToMany(mappedBy = "owners")
+	private Set<Account> accounts;
 
 	public void addAddress(Address address) {
 		addresses.add(address);
 		address.setCustomer(this);
+	}
+
+	public void addAccount(Account account) {
+		if (accounts.add(account)) {
+			account.getOwners().add(this);
+		}
 	}
 
 }

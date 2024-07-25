@@ -1,5 +1,7 @@
 package com.minibank.mini_bank_system.entities;
 
+import java.util.Set;
+
 import org.hibernate.envers.Audited;
 
 import jakarta.persistence.Entity;
@@ -7,35 +9,35 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity
-@Table(name = "addresses")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
 @Builder
 @Audited
-public class Address extends BaseEntity {
+public class Account extends BaseEntity {
 
-	// TODO improve id generation strategy
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	// TODO improve fields naming
-	private String street;
-	private String city;
-	private String state;
-	private String zipCode;
-	private String country;
+	private String accountNumber;
 
-	@ManyToOne
-	@JoinColumn(name = "customer_id")
-	private Customer customer;
+	private double balance;
+
+	@ManyToMany
+	@JoinTable(name = "customer_account", joinColumns = @JoinColumn(name = "account_id"), inverseJoinColumns = @JoinColumn(name = "customer_id"))
+	private Set<Customer> owners;
+
+	public void addOwner(Customer customer) {
+		this.owners.add(customer);
+	}
+
 }
