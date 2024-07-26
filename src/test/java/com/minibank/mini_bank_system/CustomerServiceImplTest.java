@@ -45,37 +45,62 @@ public class CustomerServiceImplTest {
 
 	@Test
 	void createCustomer_ShouldCreateCustomer() {
-		// Arrange
-		CustomerDTO customerDTO = CustomerDTO.builder().name("John").lastname("Doe").phoneNumber("1234567890")
-				.email("john.doe@example.com").customerType(CustomerType.INDIVIDUAL).addresses(Collections.emptyList())
-				.accountIds(Set.of(1L, 2L)).build();
+	    // Arrange
+	    CustomerDTO customerDTO = CustomerDTO.builder()
+	            .name("John")
+	            .lastname("Doe")
+	            .phoneNumber("1234567890")
+	            .email("john.doe@example.com")
+	            .customerType(CustomerType.INDIVIDUAL)
+	            .addresses(Collections.emptyList())
+	            .accountIds(Set.of(1L, 2L))
+	            .build();
 
-		// Create Account entities for the test
-		Account account1 = Account.builder().id(1L).accountNumber("ACCT1").balance(100.0).build();
-		Account account2 = Account.builder().id(2L).accountNumber("ACCT2").balance(200.0).build();
+	    // Create Account entities for the test
+	    Account account1 = Account.builder()
+	            .accountNumber("ACCT1")
+	            .numberOfOwners(1)
+	            .build();
+	    account1.setId(1L); // Correctly set ID for account1
 
-		// Create a Customer entity as expected to be returned from the service
-		Customer customer = Customer.builder().id(1L).name("John").lastname("Doe").phoneNumber("1234567890")
-				.email("john.doe@example.com").customerType(CustomerType.INDIVIDUAL).addresses(new ArrayList<>())
-				.accounts(Set.of(account1, account2)).build();
+	    Account account2 = Account.builder()
+	            .accountNumber("ACCT2")
+	            .numberOfOwners(1)
+	            .build();
+	    account2.setId(2L); // Correctly set ID for account2
 
-		// Mock repository interactions
-		when(customerRepository.save(any(Customer.class))).thenReturn(customer);
-		when(accountRepository.findById(1L)).thenReturn(Optional.of(account1));
-		when(accountRepository.findById(2L)).thenReturn(Optional.of(account2));
+	    // Create a Customer entity as expected to be returned from the service
+	    Customer customer = Customer.builder()
+	            .id(1L)
+	            .name("John")
+	            .lastname("Doe")
+	            .phoneNumber("1234567890")
+	            .email("john.doe@example.com")
+	            .customerType(CustomerType.INDIVIDUAL)
+	            .addresses(new ArrayList<>())
+	            .accounts(Set.of(account1, account2))
+	            .build();
 
-		// Act
-		CustomerDTO result = customerService.createCustomer(customerDTO);
+	    // Mock repository interactions
+	    when(customerRepository.save(any(Customer.class))).thenReturn(customer);
+	    when(accountRepository.findById(1L)).thenReturn(Optional.of(account1));
+	    when(accountRepository.findById(2L)).thenReturn(Optional.of(account2));
 
-		// Assert
-		assertNotNull(result);
-		assertEquals(customerDTO.getName(), result.getName());
-		assertEquals(customerDTO.getLastname(), result.getLastname());
-		assertEquals(customerDTO.getPhoneNumber(), result.getPhoneNumber());
-		assertEquals(customerDTO.getEmail(), result.getEmail());
-		assertEquals(customerDTO.getCustomerType(), result.getCustomerType());
-		assertEquals(customerDTO.getAccountIds(), result.getAccountIds());
+	    // Act
+	    CustomerDTO result = customerService.createCustomer(customerDTO);
+
+	    // Assert
+	    assertNotNull(result);
+	    assertEquals(customerDTO.getName(), result.getName());
+	    assertEquals(customerDTO.getLastname(), result.getLastname());
+	    assertEquals(customerDTO.getPhoneNumber(), result.getPhoneNumber());
+	    assertEquals(customerDTO.getEmail(), result.getEmail());
+	    assertEquals(customerDTO.getCustomerType(), result.getCustomerType());
+
+	    // Ensure account IDs are correctly compared
+	    assertEquals(customerDTO.getAccountIds(), result.getAccountIds());
 	}
+
 
 	@Test
 	void updateCustomer_ShouldUpdateCustomer() {

@@ -14,12 +14,12 @@ import lombok.Data;
 public class AccountDTO {
 	private Long id;
 	private String accountNumber;
-	private double balance;
+	private int numberOfOwners;
 	private Set<Long> ownerIds;
 
 	public static AccountDTO fromEntity(Account account) {
 		return AccountDTO.builder().id(account.getId()).accountNumber(account.getAccountNumber())
-				.balance(account.getBalance())
+				.numberOfOwners(account.getNumberOfOwners())
 				.ownerIds(account.getOwners().stream().map(Customer::getId).collect(Collectors.toSet())).build();
 	}
 
@@ -27,7 +27,7 @@ public class AccountDTO {
 		Account account = new Account();
 		account.setId(accountDTO.getId());
 		account.setAccountNumber(accountDTO.getAccountNumber());
-		account.setBalance(accountDTO.getBalance());
+		account.setNumberOfOwners(accountDTO.getNumberOfOwners());
 		return account;
 	}
 }

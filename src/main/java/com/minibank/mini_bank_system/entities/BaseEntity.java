@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import org.hibernate.envers.Audited;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 
 import jakarta.persistence.GeneratedValue;
@@ -13,6 +14,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.Version;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
@@ -21,10 +23,11 @@ import lombok.experimental.SuperBuilder;
 @Audited
 @SuperBuilder
 @NoArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public abstract class BaseEntity {
-	//TODO improve id generation strategy
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@EqualsAndHashCode.Include
 	private Long id;
 
 	@Version
@@ -36,8 +39,10 @@ public abstract class BaseEntity {
 	@CreatedDate
 	public LocalDateTime creationDate;
 
-	@LastModifiedDate
+	@LastModifiedBy
 	public String lastModifiedBy;
+
+	@LastModifiedDate
 	public LocalDateTime lastModifiedDate;
 
 }

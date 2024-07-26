@@ -1,13 +1,13 @@
 package com.minibank.mini_bank_system.entities;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import org.hibernate.envers.Audited;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
@@ -24,17 +24,15 @@ import lombok.NoArgsConstructor;
 @Audited
 public class Account extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-
 	private String accountNumber;
 
-	private double balance;
+	private int numberOfOwners;
 
 	@ManyToMany
 	@JoinTable(name = "customer_account", joinColumns = @JoinColumn(name = "account_id"), inverseJoinColumns = @JoinColumn(name = "customer_id"))
-	private Set<Customer> owners;
+	@Builder.Default
+	@JsonIgnore
+	private Set<Customer> owners = new HashSet<>();
 
 	public void addOwner(Customer customer) {
 		this.owners.add(customer);

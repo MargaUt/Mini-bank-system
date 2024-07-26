@@ -68,7 +68,7 @@ public class CustomerServiceImpl implements CustomerService {
 				// Create a new account if it doesn't exist
 				Account newAccount = new Account();
 				newAccount.setAccountNumber("ACCT" + id);
-				newAccount.setBalance(0.0);
+				newAccount.setNumberOfOwners(1);
 				return accountRepository.save(newAccount);
 			}
 		}).collect(Collectors.toSet());
