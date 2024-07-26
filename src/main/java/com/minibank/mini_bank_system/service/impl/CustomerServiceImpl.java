@@ -1,7 +1,6 @@
 package com.minibank.mini_bank_system.service.impl;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -22,12 +21,11 @@ import com.minibank.mini_bank_system.exception.ResourceNotFoundException;
 import com.minibank.mini_bank_system.repository.AccountRepository;
 import com.minibank.mini_bank_system.repository.CustomerRepository;
 import com.minibank.mini_bank_system.service.CustomerService;
+import com.minibank.mini_bank_system.service.mapper.AddressMapper;
+import com.minibank.mini_bank_system.service.mapper.CustomerMapper;
 
 @Service
 public class CustomerServiceImpl implements CustomerService {
-
-	// TODO:
-	// Implement several tests for CustomerServiceImpl
 
 	@Autowired
 	private CustomerRepository customerRepository;
@@ -38,22 +36,25 @@ public class CustomerServiceImpl implements CustomerService {
 	@Override
 	@Transactional
 	public CustomerDTO createCustomer(CustomerDTO customerDTO) {
-		Customer customer = convertToEntity(customerDTO);
+		// Fetch or create accounts based on the account IDs before calling the mapper
+		Set<Account> accounts = createOrFetchAccounts(customerDTO.getAccountIds());
+
+		// Convert CustomerDTO to Customer entity, including the accounts
+		Customer customer = CustomerMapper.toCustomer(customerDTO, accounts);
 
 		// Handle addresses
 		handleAddresses(customer, customerDTO.getAddresses());
 
-		// Assign accounts to customer, creating them if necessary
-		Set<Account> accountsToAdd = createOrFetchAccounts(customerDTO.getAccountIds());
-		customer.setAccounts(accountsToAdd);
-
+		// Save the customer
 		customer = customerRepository.save(customer);
-		return convertToDTO(customer);
+
+		// Convert the saved Customer entity back to DTO
+		return CustomerMapper.toCustomerDTO(customer);
 	}
 
 	private void handleAddresses(Customer customer, List<AddressDTO> addressDTOs) {
 		for (AddressDTO addressDTO : addressDTOs) {
-			Address address = convertToEntity(addressDTO);
+			Address address = AddressMapper.toEntity(addressDTO);
 			address.setCustomer(customer);
 			customer.addAddress(address);
 		}
@@ -82,7 +83,7 @@ public class CustomerServiceImpl implements CustomerService {
 			Customer existingCustomer = existingCustomerOpt.get();
 			updateCustomerDetails(existingCustomer, customerDTO);
 			existingCustomer = customerRepository.save(existingCustomer);
-			return convertToDTO(existingCustomer);
+			return CustomerMapper.toCustomerDTO(existingCustomer);
 		} else {
 			throw new ResourceNotFoundException("Customer not found with ID: " + id);
 		}
@@ -102,7 +103,7 @@ public class CustomerServiceImpl implements CustomerService {
 
 		// Add new addresses
 		for (AddressDTO addressDTO : customerDTO.getAddresses()) {
-			Address address = convertToEntity(addressDTO);
+			Address address = AddressMapper.toEntity(addressDTO);
 			address.setCustomer(existingCustomer);
 			existingCustomer.addAddress(address);
 		}
@@ -114,62 +115,14 @@ public class CustomerServiceImpl implements CustomerService {
 		Pageable pageable = PageRequest.of(page, size);
 		Page<Customer> customerPage = customerRepository.findAllByNameContainingOrEmailContaining(searchTerm,
 				searchTerm, pageable);
-		return customerPage.getContent().stream().map(this::convertToDTO).collect(Collectors.toList());
+		return customerPage.getContent().stream().map(CustomerMapper::toCustomerDTO).collect(Collectors.toList());
 	}
 
 	// TODO fix that account would be displayed
 	@Override
 	@Transactional(readOnly = true)
 	public Optional<CustomerDTO> getCustomerById(Long id) {
-		return customerRepository.findById(id).map(this::convertToDTO);
-	}
-
-	// TODO move converted to Entities and DTOs
-	private CustomerDTO convertToDTO(Customer customer) {
-		return CustomerDTO.builder().id(customer.getId()).name(customer.getName()).lastname(customer.getLastname())
-				.phoneNumber(customer.getPhoneNumber()).email(customer.getEmail())
-				.customerType(customer.getCustomerType())
-				.addresses(customer.getAddresses().stream().map(this::convertToDTO)
-						.collect(Collectors.toList()))
-				.accountIds(customer.getAccounts().stream().map(Account::getId)
-						.collect(Collectors.toSet()))
-				.build();
-	}
-
-	private AddressDTO convertToDTO(Address address) {
-		AddressDTO dto = new AddressDTO();
-		dto.setId(address.getId());
-		dto.setStreet(address.getStreet());
-		dto.setCity(address.getCity());
-		dto.setState(address.getState());
-		dto.setZipCode(address.getZipCode());
-		dto.setCountry(address.getCountry());
-
-		return dto;
-	}
-
-	private Set<Account> accountDTOsToEntities(Set<Long> accountIds) {
-		return accountIds.stream().map(id -> {
-			Optional<Account> accountOpt = accountRepository.findById(id);
-			return accountOpt.orElse(null);
-		}).filter(Objects::nonNull).collect(Collectors.toSet());
-	}
-
-	private Customer convertToEntity(CustomerDTO customerDTO) {
-		// Fetch or create accounts based on the account IDs
-		Set<Account> accounts = accountDTOsToEntities(customerDTO.getAccountIds());
-
-		// Convert CustomerDTO to Customer entity
-		return Customer.builder().id(customerDTO.getId()).name(customerDTO.getName())
-				.lastname(customerDTO.getLastname()).phoneNumber(customerDTO.getPhoneNumber())
-				.email(customerDTO.getEmail()).customerType(customerDTO.getCustomerType())
-				.addresses(customerDTO.getAddresses().stream().map(this::convertToEntity).collect(Collectors.toList()))
-				.accounts(accounts).build();
-	}
-
-	private Address convertToEntity(AddressDTO addressDTO) {
-		return Address.builder().street(addressDTO.getStreet()).city(addressDTO.getCity()).state(addressDTO.getState())
-				.zipCode(addressDTO.getZipCode()).country(addressDTO.getCountry()).build();
+		return customerRepository.findById(id).map(CustomerMapper::toCustomerDTO);
 	}
 
 }

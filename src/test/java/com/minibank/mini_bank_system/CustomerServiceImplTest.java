@@ -2,7 +2,6 @@ package com.minibank.mini_bank_system;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -45,62 +44,42 @@ public class CustomerServiceImplTest {
 
 	@Test
 	void createCustomer_ShouldCreateCustomer() {
-	    // Arrange
-	    CustomerDTO customerDTO = CustomerDTO.builder()
-	            .name("John")
-	            .lastname("Doe")
-	            .phoneNumber("1234567890")
-	            .email("john.doe@example.com")
-	            .customerType(CustomerType.INDIVIDUAL)
-	            .addresses(Collections.emptyList())
-	            .accountIds(Set.of(1L, 2L))
-	            .build();
+		// Arrange
+		CustomerDTO customerDTO = CustomerDTO.builder().name("John").lastname("Doe").phoneNumber("1234567890")
+				.email("john.doe@example.com").customerType(CustomerType.INDIVIDUAL).addresses(Collections.emptyList())
+				.accountIds(Set.of(1L, 2L)).build();
 
-	    // Create Account entities for the test
-	    Account account1 = Account.builder()
-	            .accountNumber("ACCT1")
-	            .numberOfOwners(1)
-	            .build();
-	    account1.setId(1L); // Correctly set ID for account1
+		// Create Account entities for the test
+		Account account1 = Account.builder().accountNumber("ACCT1").numberOfOwners(1).build();
+		account1.setId(1L); // Correctly set ID for account1
 
-	    Account account2 = Account.builder()
-	            .accountNumber("ACCT2")
-	            .numberOfOwners(1)
-	            .build();
-	    account2.setId(2L); // Correctly set ID for account2
+		Account account2 = Account.builder().accountNumber("ACCT2").numberOfOwners(1).build();
+		account2.setId(2L); // Correctly set ID for account2
 
-	    // Create a Customer entity as expected to be returned from the service
-	    Customer customer = Customer.builder()
-	            .id(1L)
-	            .name("John")
-	            .lastname("Doe")
-	            .phoneNumber("1234567890")
-	            .email("john.doe@example.com")
-	            .customerType(CustomerType.INDIVIDUAL)
-	            .addresses(new ArrayList<>())
-	            .accounts(Set.of(account1, account2))
-	            .build();
+		// Create a Customer entity as expected to be returned from the service
+		Customer customer = Customer.builder().id(1L).name("John").lastname("Doe").phoneNumber("1234567890")
+				.email("john.doe@example.com").customerType(CustomerType.INDIVIDUAL).addresses(new ArrayList<>())
+				.accounts(Set.of(account1, account2)).build();
 
-	    // Mock repository interactions
-	    when(customerRepository.save(any(Customer.class))).thenReturn(customer);
-	    when(accountRepository.findById(1L)).thenReturn(Optional.of(account1));
-	    when(accountRepository.findById(2L)).thenReturn(Optional.of(account2));
+		// Mock repository interactions
+		when(customerRepository.save(any(Customer.class))).thenReturn(customer);
+		when(accountRepository.findById(1L)).thenReturn(Optional.of(account1));
+		when(accountRepository.findById(2L)).thenReturn(Optional.of(account2));
 
-	    // Act
-	    CustomerDTO result = customerService.createCustomer(customerDTO);
+		// Act
+		CustomerDTO result = customerService.createCustomer(customerDTO);
 
-	    // Assert
-	    assertNotNull(result);
-	    assertEquals(customerDTO.getName(), result.getName());
-	    assertEquals(customerDTO.getLastname(), result.getLastname());
-	    assertEquals(customerDTO.getPhoneNumber(), result.getPhoneNumber());
-	    assertEquals(customerDTO.getEmail(), result.getEmail());
-	    assertEquals(customerDTO.getCustomerType(), result.getCustomerType());
+		// Assert
+		assertNotNull(result);
+		assertEquals(customerDTO.getName(), result.getName());
+		assertEquals(customerDTO.getLastname(), result.getLastname());
+		assertEquals(customerDTO.getPhoneNumber(), result.getPhoneNumber());
+		assertEquals(customerDTO.getEmail(), result.getEmail());
+		assertEquals(customerDTO.getCustomerType(), result.getCustomerType());
 
-	    // Ensure account IDs are correctly compared
-	    assertEquals(customerDTO.getAccountIds(), result.getAccountIds());
+		// Ensure account IDs are correctly compared
+		assertEquals(customerDTO.getAccountIds(), result.getAccountIds());
 	}
-
 
 	@Test
 	void updateCustomer_ShouldUpdateCustomer() {
