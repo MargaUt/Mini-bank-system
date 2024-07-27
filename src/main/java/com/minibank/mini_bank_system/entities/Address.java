@@ -27,6 +27,6 @@ public class Address extends BaseEntity {
 	private String country;
 
 	@ManyToOne
-	@JoinColumn(name = "customer_id")
+	@JoinColumn(name = "customer_name")
 	private Customer customer;
 }

@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -15,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.minibank.mini_bank_system.dto.AddressDTO;
 import com.minibank.mini_bank_system.dto.CustomerDTO;
 import com.minibank.mini_bank_system.entities.Account;
-import com.minibank.mini_bank_system.entities.Address;
 import com.minibank.mini_bank_system.entities.Customer;
 import com.minibank.mini_bank_system.exception.ResourceNotFoundException;
 import com.minibank.mini_bank_system.repository.AccountRepository;
@@ -27,6 +27,8 @@ import com.minibank.mini_bank_system.service.mapper.CustomerMapper;
 @Service
 public class CustomerServiceImpl implements CustomerService {
 
+	private static String CUSTOMER_NOT_TFOUND = "Customer not found";
+
 	@Autowired
 	private CustomerRepository customerRepository;
 
@@ -36,77 +38,78 @@ public class CustomerServiceImpl implements CustomerService {
 	@Override
 	@Transactional
 	public CustomerDTO createCustomer(CustomerDTO customerDTO) {
-		// Fetch or create accounts based on the account IDs before calling the mapper
-		Set<Account> accounts = createOrFetchAccounts(customerDTO.getAccountIds());
+		// Create or fetch accounts
+		Set<Account> accounts = fetchOrCreateAccounts(customerDTO.getAccountIds());
 
-		// Convert CustomerDTO to Customer entity, including the accounts
+		// Convert DTO to entity and handle addresses
 		Customer customer = CustomerMapper.toCustomer(customerDTO, accounts);
+		updateCustomerAddresses(customer, customerDTO.getAddresses());
 
-		// Handle addresses
-		handleAddresses(customer, customerDTO.getAddresses());
-
-		// Save the customer
+		// Save and return the created customer
 		customer = customerRepository.save(customer);
-
-		// Convert the saved Customer entity back to DTO
 		return CustomerMapper.toCustomerDTO(customer);
 	}
 
-	private void handleAddresses(Customer customer, List<AddressDTO> addressDTOs) {
-		for (AddressDTO addressDTO : addressDTOs) {
-			Address address = AddressMapper.toEntity(addressDTO);
-			address.setCustomer(customer);
-			customer.addAddress(address);
+	private Set<Account> fetchOrCreateAccounts(Set<Long> accountIds) {
+		if (accountIds == null || accountIds.isEmpty()) {
+			return Set.of(createDefaultAccount());
 		}
+		return accountIds.stream().map(id -> accountRepository.findById(id).orElseGet(() -> createNewAccount(id)))
+				.collect(Collectors.toSet());
 	}
 
-	private Set<Account> createOrFetchAccounts(Set<Long> accountIds) {
-		return accountIds.stream().map(id -> {
-			Optional<Account> accountOpt = accountRepository.findById(id);
-			if (accountOpt.isPresent()) {
-				return accountOpt.get();
-			} else {
-				// Create a new account if it doesn't exist
-				Account newAccount = new Account();
-				newAccount.setAccountNumber("ACCT" + id);
-				newAccount.setNumberOfOwners(1);
-				return accountRepository.save(newAccount);
-			}
-		}).collect(Collectors.toSet());
+	private Account createDefaultAccount() {
+		Account defaultAccount = new Account();
+		defaultAccount.setAccountNumber(generateDefaultAccountNumber());
+		defaultAccount.setNumberOfOwners(1);
+		return accountRepository.save(defaultAccount);
+	}
+
+	private Account createNewAccount(Long id) {
+		Account newAccount = new Account();
+		newAccount.setAccountNumber("ACCT" + id);
+		newAccount.setNumberOfOwners(1);
+		return accountRepository.save(newAccount);
+	}
+
+	private String generateDefaultAccountNumber() {
+		return "ACCT" + System.currentTimeMillis();
+	}
+
+	private void updateCustomerAddresses(Customer customer, List<AddressDTO> addressDTOs) {
+		customer.getAddresses().clear(); // Remove old addresses
+		addressDTOs.stream().filter(this::isAddressDTOValid).map(AddressMapper::toEntity)
+				.peek(address -> address.setCustomer(customer)).forEach(customer::addAddress);
+	}
+
+	private boolean isAddressDTOValid(AddressDTO addressDTO) {
+		return addressDTO.getStreet() != null && !addressDTO.getStreet().isEmpty() && addressDTO.getCity() != null
+				&& !addressDTO.getCity().isEmpty() && addressDTO.getState() != null && !addressDTO.getState().isEmpty()
+				&& addressDTO.getZipCode() != null && !addressDTO.getZipCode().isEmpty()
+				&& addressDTO.getCountry() != null && !addressDTO.getCountry().isEmpty();
 	}
 
 	@Override
 	@Transactional
 	public CustomerDTO updateCustomer(Long id, CustomerDTO customerDTO) {
-		Optional<Customer> existingCustomerOpt = customerRepository.findById(id);
-		if (existingCustomerOpt.isPresent()) {
-			Customer existingCustomer = existingCustomerOpt.get();
-			updateCustomerDetails(existingCustomer, customerDTO);
-			existingCustomer = customerRepository.save(existingCustomer);
-			return CustomerMapper.toCustomerDTO(existingCustomer);
-		} else {
-			throw new ResourceNotFoundException("Customer not found with ID: " + id);
-		}
+		Customer existingCustomer = customerRepository.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException(CUSTOMER_NOT_TFOUND + id));
+
+		// Update customer details
+		updateCustomerDetails(existingCustomer, customerDTO);
+
+		// Save and return the updated customer
+		existingCustomer = customerRepository.save(existingCustomer);
+		return CustomerMapper.toCustomerDTO(existingCustomer);
 	}
 
-	// TODO enable updating with customer with addresses
 	private void updateCustomerDetails(Customer existingCustomer, CustomerDTO customerDTO) {
-		// Update fields
 		existingCustomer.setName(customerDTO.getName());
 		existingCustomer.setLastname(customerDTO.getLastname());
 		existingCustomer.setPhoneNumber(customerDTO.getPhoneNumber());
 		existingCustomer.setEmail(customerDTO.getEmail());
 		existingCustomer.setCustomerType(customerDTO.getCustomerType());
-
-		// Clear existing addresses
-		existingCustomer.getAddresses().clear();
-
-		// Add new addresses
-		for (AddressDTO addressDTO : customerDTO.getAddresses()) {
-			Address address = AddressMapper.toEntity(addressDTO);
-			address.setCustomer(existingCustomer);
-			existingCustomer.addAddress(address);
-		}
+		updateCustomerAddresses(existingCustomer, customerDTO.getAddresses());
 	}
 
 	@Override
@@ -118,11 +121,14 @@ public class CustomerServiceImpl implements CustomerService {
 		return customerPage.getContent().stream().map(CustomerMapper::toCustomerDTO).collect(Collectors.toList());
 	}
 
-	// TODO fix that account would be displayed
 	@Override
 	@Transactional(readOnly = true)
 	public Optional<CustomerDTO> getCustomerById(Long id) {
-		return customerRepository.findById(id).map(CustomerMapper::toCustomerDTO);
-	}
+		Customer customer = customerRepository.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException(CUSTOMER_NOT_TFOUND + id));
 
+		// Ensure collection initialization
+		Hibernate.initialize(customer.getAccounts());
+		return Optional.of(CustomerMapper.toCustomerDTO(customer));
+	}
 }

@@ -13,6 +13,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
@@ -55,12 +57,16 @@ public class Customer extends BaseEntity {
 	@Enumerated(EnumType.STRING)
 	public CustomerType customerType;
 
-	@OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+	@OneToMany(mappedBy = "customer", cascade = { CascadeType.DETACH, CascadeType.MERGE })
 	@Builder.Default
 	private List<Address> addresses = new ArrayList<>();
 
-	@ManyToMany(mappedBy = "owners")
-	@Builder.Default
+    @ManyToMany(fetch = FetchType.LAZY) // Default to lazy loading
+    @JoinTable(
+        name = "customer_account",
+        joinColumns = @JoinColumn(name = "customer_id"),
+        inverseJoinColumns = @JoinColumn(name = "account_id")
+    )
 	private Set<Account> accounts = new HashSet<>();
 
 	public void addAddress(Address address) {

@@ -7,9 +7,8 @@ import org.hibernate.envers.Audited;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,8 +27,7 @@ public class Account extends BaseEntity {
 
 	private int numberOfOwners;
 
-	@ManyToMany
-	@JoinTable(name = "customer_account", joinColumns = @JoinColumn(name = "account_id"), inverseJoinColumns = @JoinColumn(name = "customer_id"))
+	@ManyToMany(mappedBy = "accounts", cascade = { CascadeType.DETACH, CascadeType.MERGE })
 	@Builder.Default
 	@JsonIgnore
 	private Set<Customer> owners = new HashSet<>();
