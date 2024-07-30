@@ -62,7 +62,7 @@ mvn test
 
 ### Create Customer
 
-- **URL**: `/customers`
+- **URL**: `api/v1/customers`
 - **Method**: `POST`
 - **Request Body**:
   ```json
@@ -81,13 +81,13 @@ mvn test
         "country": "USA"
       }
     ],
-    "accountIds": []
+   "accountNumber": "ACCT12345"
   }
   ```
 
 ### Update Customer
 
-- **URL**: `/customers/updateCustomer/{id}`
+- **URL**: `api/v1/customers/{id}`
 - **Method**: `PUT`
 - **Request Body**:
   ```json
@@ -105,22 +105,21 @@ mvn test
         "zipCode": "12345",
         "country": "USA"
       }
-    ],
-    "accountIds": []
+    ]
   }
   ```
 
 ### Retrieve Customer
 
-- **URL**: `/customers/getCustomer/{id}`
+- **URL**: `api/v1/customers/{id}`
 - **Method**: `GET`
 
 ### Search Customers
 
-- **URL**: `/customers/search`
+- **URL**: `api/v1/customers/search?searchTerm=John&page=0&size=10`
 - **Method**: `GET`
 - **Query Parameters**:
-  - `searchTerm`: The term to search for in names or emails.
+  - `searchTerm`: The term to search for in names, lastnames or emails.
   - `page`: The page number for pagination.
   - `size`: The number of records per page.
 
