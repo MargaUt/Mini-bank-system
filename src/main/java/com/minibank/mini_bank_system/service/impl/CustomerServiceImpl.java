@@ -2,7 +2,6 @@ package com.minibank.mini_bank_system.service.impl;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.hibernate.Hibernate;
@@ -17,6 +16,7 @@ import com.minibank.mini_bank_system.dto.AddressDTO;
 import com.minibank.mini_bank_system.dto.CustomerDTO;
 import com.minibank.mini_bank_system.entities.Account;
 import com.minibank.mini_bank_system.entities.Customer;
+import com.minibank.mini_bank_system.exception.CustomerAlreadyExistsException;
 import com.minibank.mini_bank_system.exception.ResourceNotFoundException;
 import com.minibank.mini_bank_system.repository.AccountRepository;
 import com.minibank.mini_bank_system.repository.CustomerRepository;
@@ -27,7 +27,8 @@ import com.minibank.mini_bank_system.service.mapper.CustomerMapper;
 @Service
 public class CustomerServiceImpl implements CustomerService {
 
-	private static String CUSTOMER_NOT_TFOUND = "Customer not found";
+	private static final String CUSTOMER_NOT_FOUND = "Customer with  not found with this ";
+	private static final String CUSTOMER_COULD_NOT_BE_ASSIGNED = "Cannot add customer: Another customer with the same name, lastname, or email is already assigned to this account.";
 
 	@Autowired
 	private CustomerRepository customerRepository;
@@ -38,62 +39,39 @@ public class CustomerServiceImpl implements CustomerService {
 	@Override
 	@Transactional
 	public CustomerDTO createCustomer(CustomerDTO customerDTO) {
-		// Create or fetch accounts
-		Set<Account> accounts = fetchOrCreateAccounts(customerDTO.getAccountIds());
+		// Fetch or create an account
+		Account account = fetchOrCreateAccount(customerDTO.getAccountNumber());
+
+		// Check if the customer already exists in the account (in-memory check)
+		if (isCustomerDuplicate(customerDTO, account)) {
+			throw new CustomerAlreadyExistsException(CUSTOMER_COULD_NOT_BE_ASSIGNED);
+		}
 
 		// Convert DTO to entity and handle addresses
-		Customer customer = CustomerMapper.toCustomer(customerDTO, accounts);
+		Customer customer = CustomerMapper.toCustomer(customerDTO, account);
 		updateCustomerAddresses(customer, customerDTO.getAddresses());
 
-		// Save and return the created customer
+		// Save the customer
 		customer = customerRepository.save(customer);
-		return CustomerMapper.toCustomerDTO(customer);
-	}
 
-	private Set<Account> fetchOrCreateAccounts(Set<Long> accountIds) {
-		if (accountIds == null || accountIds.isEmpty()) {
-			return Set.of(createDefaultAccount());
-		}
-		return accountIds.stream().map(id -> accountRepository.findById(id).orElseGet(() -> createNewAccount(id)))
-				.collect(Collectors.toSet());
-	}
+		// Update the account with the new customer
+		updateAccountWithCustomer(account, customer);
 
-	private Account createDefaultAccount() {
-		Account defaultAccount = new Account();
-		defaultAccount.setAccountNumber(generateDefaultAccountNumber());
-		defaultAccount.setNumberOfOwners(1);
-		return accountRepository.save(defaultAccount);
-	}
+		// Fetch the number of customers associated with the account
+		int numberOfAssignedCustomers = account.getOwners().size();
 
-	private Account createNewAccount(Long id) {
-		Account newAccount = new Account();
-		newAccount.setAccountNumber("ACCT" + id);
-		newAccount.setNumberOfOwners(1);
-		return accountRepository.save(newAccount);
-	}
+		// Create a DTO with the number of assigned customers
+		CustomerDTO customerDTOResponse = CustomerMapper.toCustomerDTO(customer);
+		customerDTOResponse.setNumberOfAssignedCustomers(numberOfAssignedCustomers);
 
-	private String generateDefaultAccountNumber() {
-		return "ACCT" + System.currentTimeMillis();
-	}
-
-	private void updateCustomerAddresses(Customer customer, List<AddressDTO> addressDTOs) {
-		customer.getAddresses().clear(); // Remove old addresses
-		addressDTOs.stream().filter(this::isAddressDTOValid).map(AddressMapper::toEntity)
-				.peek(address -> address.setCustomer(customer)).forEach(customer::addAddress);
-	}
-
-	private boolean isAddressDTOValid(AddressDTO addressDTO) {
-		return addressDTO.getStreet() != null && !addressDTO.getStreet().isEmpty() && addressDTO.getCity() != null
-				&& !addressDTO.getCity().isEmpty() && addressDTO.getState() != null && !addressDTO.getState().isEmpty()
-				&& addressDTO.getZipCode() != null && !addressDTO.getZipCode().isEmpty()
-				&& addressDTO.getCountry() != null && !addressDTO.getCountry().isEmpty();
+		return customerDTOResponse;
 	}
 
 	@Override
 	@Transactional
 	public CustomerDTO updateCustomer(Long id, CustomerDTO customerDTO) {
 		Customer existingCustomer = customerRepository.findById(id)
-				.orElseThrow(() -> new ResourceNotFoundException(CUSTOMER_NOT_TFOUND + id));
+				.orElseThrow(() -> new ResourceNotFoundException(CUSTOMER_NOT_FOUND, id));
 
 		// Update customer details
 		updateCustomerDetails(existingCustomer, customerDTO);
@@ -113,22 +91,106 @@ public class CustomerServiceImpl implements CustomerService {
 	}
 
 	@Override
-	@Transactional
+	@Transactional(readOnly = true)
 	public List<CustomerDTO> searchCustomers(String searchTerm, int page, int size) {
 		Pageable pageable = PageRequest.of(page, size);
-		Page<Customer> customerPage = customerRepository.findAllByNameContainingOrEmailContaining(searchTerm,
-				searchTerm, pageable);
-		return customerPage.getContent().stream().map(CustomerMapper::toCustomerDTO).collect(Collectors.toList());
+
+		// Fetch customers based on the search term
+		Page<Customer> customerPage = customerRepository.findAllByNameContainingOrLastnameContainingOrEmailContaining(
+				searchTerm, searchTerm, searchTerm, pageable);
+
+		List<CustomerDTO> customerDTOList = customerPage.getContent().stream().map(customer -> {
+			CustomerDTO customerDTO = CustomerMapper.toCustomerDTO(customer);
+			if (customer.getAccount() != null) {
+				Account account = customer.getAccount();
+				int numberOfAssignedCustomers = account.getOwners().size();
+				customerDTO.setNumberOfAssignedCustomers(numberOfAssignedCustomers);
+			} else {
+				customerDTO.setNumberOfAssignedCustomers(0);
+			}
+
+			return customerDTO;
+		}).collect(Collectors.toList());
+
+		return customerDTOList;
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Optional<CustomerDTO> getCustomerById(Long id) {
 		Customer customer = customerRepository.findById(id)
-				.orElseThrow(() -> new ResourceNotFoundException(CUSTOMER_NOT_TFOUND + id));
+				.orElseThrow(() -> new ResourceNotFoundException(CUSTOMER_NOT_FOUND, id));
 
 		// Ensure collection initialization
-		Hibernate.initialize(customer.getAccounts());
-		return Optional.of(CustomerMapper.toCustomerDTO(customer));
+		Hibernate.initialize(customer.getAccount());
+
+		// Create the DTO
+		CustomerDTO customerDTO = CustomerMapper.toCustomerDTO(customer);
+
+		// Calculate number of assigned customers if there is an associated account
+		if (customer.getAccount() != null) {
+			int numberOfAssignedCustomers = customer.getAccount().getOwners().size();
+			customerDTO.setNumberOfAssignedCustomers(numberOfAssignedCustomers);
+		} else {
+			customerDTO.setNumberOfAssignedCustomers(0);
+		}
+
+		return Optional.of(customerDTO);
 	}
+
+	private Account fetchOrCreateAccount(String accountNumber) {
+		if (accountNumber == null || accountNumber.isEmpty()) {
+			return createDefaultAccount();
+		}
+		return accountRepository.findByAccountNumber(accountNumber)
+				.orElseGet(() -> createAccountWithNumber(accountNumber));
+	}
+
+	private Account createDefaultAccount() {
+		Account defaultAccount = new Account();
+		defaultAccount.setAccountNumber(generateDefaultAccountNumber());
+		defaultAccount.setNumberOfOwners(0); // Initialize with 0 owners
+		return accountRepository.save(defaultAccount);
+	}
+
+	private Account createAccountWithNumber(String accountNumber) {
+		Account newAccount = new Account();
+		newAccount.setAccountNumber(accountNumber);
+		newAccount.setNumberOfOwners(0);
+		return accountRepository.save(newAccount);
+	}
+
+	private String generateDefaultAccountNumber() {
+		return "ACCT" + System.currentTimeMillis();
+	}
+
+	private void updateCustomerAddresses(Customer customer, List<AddressDTO> addressDTOs) {
+		customer.getAddresses().clear();
+		addressDTOs.stream().filter(this::isAddressDTOValid).map(AddressMapper::toEntity)
+				.peek(address -> address.setCustomer(customer)).forEach(customer::addAddress);
+	}
+
+	private boolean isAddressDTOValid(AddressDTO addressDTO) {
+		return addressDTO.getStreet() != null && !addressDTO.getStreet().isEmpty() && addressDTO.getCity() != null
+				&& !addressDTO.getCity().isEmpty() && addressDTO.getState() != null && !addressDTO.getState().isEmpty()
+				&& addressDTO.getZipCode() != null && !addressDTO.getZipCode().isEmpty()
+				&& addressDTO.getCountry() != null && !addressDTO.getCountry().isEmpty();
+	}
+
+	private void updateAccountWithCustomer(Account account, Customer customer) {
+		account.addOwner(customer);
+		accountRepository.save(account);
+	}
+
+	private boolean isCustomerDuplicate(CustomerDTO customerDTO, Account account) {
+		for (Customer existingCustomer : account.getOwners()) {
+			if (existingCustomer.getName().equals(customerDTO.getName())
+					&& existingCustomer.getLastname().equals(customerDTO.getLastname())
+					&& existingCustomer.getEmail().equals(customerDTO.getEmail())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 }

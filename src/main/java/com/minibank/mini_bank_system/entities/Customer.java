@@ -1,9 +1,7 @@
 package com.minibank.mini_bank_system.entities;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.hibernate.envers.Audited;
 
@@ -11,11 +9,9 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
@@ -61,23 +57,13 @@ public class Customer extends BaseEntity {
 	@Builder.Default
 	private List<Address> addresses = new ArrayList<>();
 
-    @ManyToMany(fetch = FetchType.LAZY) // Default to lazy loading
-    @JoinTable(
-        name = "customer_account",
-        joinColumns = @JoinColumn(name = "customer_id"),
-        inverseJoinColumns = @JoinColumn(name = "account_id")
-    )
-	private Set<Account> accounts = new HashSet<>();
+	@ManyToOne
+	@JoinColumn(name = "account_id")
+	private Account account;
 
 	public void addAddress(Address address) {
 		addresses.add(address);
 		address.setCustomer(this);
-	}
-
-	public void addAccount(Account account) {
-		if (accounts.add(account)) {
-			account.getOwners().add(this);
-		}
 	}
 
 }

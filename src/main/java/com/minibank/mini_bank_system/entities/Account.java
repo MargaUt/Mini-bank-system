@@ -1,15 +1,13 @@
 package com.minibank.mini_bank_system.entities;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.envers.Audited;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,10 +25,9 @@ public class Account extends BaseEntity {
 
 	private int numberOfOwners;
 
-	@ManyToMany(mappedBy = "accounts", cascade = { CascadeType.DETACH, CascadeType.MERGE })
+	@OneToMany(mappedBy = "account", cascade = { CascadeType.DETACH, CascadeType.MERGE })
 	@Builder.Default
-	@JsonIgnore
-	private Set<Customer> owners = new HashSet<>();
+	private List<Customer> owners = new ArrayList<>();
 
 	public void addOwner(Customer customer) {
 		this.owners.add(customer);

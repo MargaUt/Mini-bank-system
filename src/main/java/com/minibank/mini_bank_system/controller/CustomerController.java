@@ -13,7 +13,7 @@ import com.minibank.mini_bank_system.exception.ResourceNotFoundException;
 import com.minibank.mini_bank_system.service.CustomerService;
 
 @RestController
-@RequestMapping("/customers")
+@RequestMapping("api/v1/customers")
 public class CustomerController {
 
 	@Autowired

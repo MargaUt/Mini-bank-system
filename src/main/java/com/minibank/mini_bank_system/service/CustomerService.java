@@ -10,44 +10,51 @@ import com.minibank.mini_bank_system.dto.CustomerDTO;
 @Service
 public interface CustomerService {
 
-    /**
-     * Create a new customer.
-     * @param customerDTO the customer data to create
-     * @return the created customer
-     */
-    CustomerDTO createCustomer(CustomerDTO customerDTO);
+	/**
+	 * Creates a new customer in the system. Before creation, it checks if a
+	 * customer with the same name, lastname, and email already exists under the
+	 * same account to ensure uniqueness. If such a customer exists, a
+	 * CustomerAlreadyExistsException is thrown.
+	 *
+	 * @param customerDTO the data transfer object containing the customer's
+	 *                    information
+	 * @return the created CustomerDTO object with the number of assigned customers
+	 *         in the account
+	 */
+	CustomerDTO createCustomer(CustomerDTO customerDTO);
 
-    /**
-     * Update an existing customer.
-     * @param id the ID of the customer to update
-     * @param customerDTO the customer data to update
-     * @return the updated customer
-     */
-    CustomerDTO updateCustomer(Long id, CustomerDTO customerDTO);
+	/**
+	 * Updates an existing customer's information. This includes updating the
+	 * customer's details and their associated addresses.
+	 *
+	 * @param id          the unique identifier of the customer to update
+	 * @param customerDTO the data transfer object containing the updated customer
+	 *                    information
+	 * @return the updated CustomerDTO object
+	 */
+	CustomerDTO updateCustomer(Long id, CustomerDTO customerDTO);
 
-    /**
-     * Get a customer by ID.
-     * @param id the ID of the customer to retrieve
-     * @return the customer with the given ID
-     */
-    Optional<CustomerDTO> getCustomerById(Long id);
+	/**
+	 * Retrieves a customer by their ID. If the customer is not found, a
+	 * ResourceNotFoundException is thrown.
+	 *
+	 * @param id the unique identifier of the customer to retrieve
+	 * @return an Optional containing the CustomerDTO object if found, or empty if
+	 *         not
+	 */
+	Optional<CustomerDTO> getCustomerById(Long id);
 
-    /**
-     * TODO: Adjust search by the requirements:
-     * Get customers by search term
-The idea is that in the bank there are a lot of customers with same name, lastname, age,
-customer type, city or street.
-We should be able to find them by search term.
-Page request - pagination.
-Request consist of search term (example: lastname), page and row number.
-Response has to contain list of customers and their total number.
-
-     * Search for customers based on a search term with pagination.
-     * @param searchTerm the term to search by
-     * @param page the page number
-     * @param size the number of records per page
-     * @return a list of customers matching the search term
-     */
-    List<CustomerDTO> searchCustomers(String searchTerm, int page, int size);
+	/**
+	 * Searches for customers based on a search term with pagination. This search
+	 * covers multiple fields such as name, lastname, and email. The search term is
+	 * used to find matching customers, and the method returns a list of CustomerDTO
+	 * objects along with the total number of matching customers.
+	 *
+	 * @param searchTerm the term to search for, which could match various fields
+	 * @param page       the zero-based page number to retrieve
+	 * @param size       the number of records per page
+	 * @return a list of CustomerDTO objects matching the search term and the total
+	 *         number of matching customers
+	 */
+	List<CustomerDTO> searchCustomers(String searchTerm, int page, int size);
 }
-
