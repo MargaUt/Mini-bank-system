@@ -32,7 +32,7 @@ A Spring Boot application for managing customers, accounts, and addresses in a m
 
 ### Prerequisites
 
-- Java 11 or higher
+- Java 17
 - Maven
 - H2 database 
 
